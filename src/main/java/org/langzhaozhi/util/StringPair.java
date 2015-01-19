@@ -26,7 +26,7 @@ public final class StringPair<T> implements Comparable<StringPair<T>> {
 
         for (int k = 0; k < min; ++k) {
             char c1 = thisKey.charAt( k );
-            char c2 = thisKey.charAt( k );
+            char c2 = otherKey.charAt( k );
             if (c1 != c2) {
                 return c1 - c2;
             }
