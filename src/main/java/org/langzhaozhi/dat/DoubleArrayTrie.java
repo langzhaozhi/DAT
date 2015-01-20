@@ -19,7 +19,7 @@ import java.util.LinkedList;
  * @see DoubleArrayTrieAhoCorasick
  */
 public final class DoubleArrayTrie<T> {
-    DoubleArrayTrieNode<T> [] mDatArray;
+    final DoubleArrayTrieNode<T> [] mDatArray;
     private DoubleArrayTrieAhoCorasick<T> mAhoCorasick;
 
     DoubleArrayTrie(DoubleArrayTrieNode<T> [] aDatArray) {

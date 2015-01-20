@@ -1,5 +1,14 @@
 package org.langzhaozhi.dat;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -64,6 +73,145 @@ public final class DoubleArrayTrieMaker {
         @SuppressWarnings("unchecked")
         ProccessingNode<T> [] parentNodes = queueInsert.toArray( new ProccessingNode [ queueInsert.size() ] );
         return DoubleArrayTrieMaker.construct( context, parentNodes );
+    }
+
+    /*
+    public static <T> DoubleArrayTrie<T> deserializeDoubleArrayTrieFromFile(File aInputFile, ValueDeserializer<T> aValueDeserializer) throws IOException {
+        try (BufferedReader datReader = new BufferedReader( new InputStreamReader( new BufferedInputStream( new FileInputStream( aInputFile ), 1024 << 8 ), "UTF-8" ) )) {
+            String firstLine = datReader.readLine();
+            if (!firstLine.startsWith( "#BeginOutputDAT(" ) || !firstLine.endsWith( ")" )) {//基本的持久化称性检查
+                throw new Error( "搞错文件喽，走错女厕所喽:" + aInputFile.getAbsolutePath() );
+            }
+            int datArrayLength = Integer.parseInt( firstLine.substring( firstLine.indexOf( '(' ) + 1, firstLine.lastIndexOf( ')' ) ) );
+            @SuppressWarnings("unchecked")
+            DoubleArrayTrieNode<T> [] datArray = new DoubleArrayTrieNode [ datArrayLength ];
+            char [] chars = new char [ datArrayLength ];//用于校验看文件是否一致
+            for (String nextLine = datReader.readLine(); nextLine != null; nextLine = datReader.readLine()) {
+                if (nextLine.charAt( 0 ) == '#') {
+                    if (!nextLine.equals( "#EndOutputDAT" ) || (nextLine = datReader.readLine()) != null) {//最后一行，也对称性检查下
+                        throw new Error( "End Format Error For DAT File:" + aInputFile.getAbsolutePath() );
+                    }
+                }
+                else {
+                    String [] parts = nextLine.split( "\t" );
+                    int datIndex = Integer.parseInt( parts[ 0 ], 16 );
+                    chars[ datIndex ] = parts[ 1 ].charAt( 0 );
+                    int base = Integer.parseInt( parts[ 2 ] );
+                    int check = Integer.parseInt( parts[ 3 ] );
+                    String valuePart = nextLine.substring( parts[ 0 ].length() + parts[ 1 ].length() + parts[ 2 ].length() + parts[ 3 ].length() + 4 );//因为T value内部也可能用\t分割，必须传递完整
+                    T value = valuePart.equals( "[]" ) ? null : aValueDeserializer.deserialize( valuePart.substring( 2, valuePart.length() - 2 ) );
+                    datArray[ datIndex ] = new DoubleArrayTrieNode<T>( base, check, value );
+                }
+            }
+            if (datArray[ datArrayLength - 1 ] == null) {//最后一个dat数组节点绝对不可能为null否则就是不一致了
+                throw new Error( "End Check Error: " + aInputFile.getAbsolutePath() );
+            }
+            //再根据chars把父子关系的base和check校验一盘：childCheck == parentIndex && childIndex == parentBase + childChar 必须成立
+            for (int i = 1; i < datArrayLength; ++i) {//从1开始，虚根不用
+                DoubleArrayTrieNode<T> childDatNode = datArray[ i ];
+                if (childDatNode != null) {
+                    if (datArray[ childDatNode.mCheck ].mBase + chars[ i ] != i) {
+                        throw new Error( "Sequence Check Error: " + aInputFile.getAbsolutePath() + ":[" + i + "," + chars[ i ] + "]" );
+                    }
+                }
+            }
+            return new DoubleArrayTrie<T>( datArray );
+        }
+    }
+    */
+
+    public static <T> DoubleArrayTrie<T> deserializeDoubleArrayTrieFromFile(File aInputFile, ValueDeserializer<T> aValueDeserializer) throws IOException {
+        try (FileInputStream fis = new FileInputStream( aInputFile )) {
+            FileChannel fc = fis.getChannel();
+            ByteBuffer fileBuffer = fis.getChannel().map( MapMode.READ_ONLY, 0, fc.size() );
+            if (fileBuffer.getInt() != ByteBuffer.wrap( "#DAT".getBytes( "UTF-8" ) ).getInt()) {//check simple magic
+                throw new Error( "搞错文件喽，走错女厕所喽:" + aInputFile.getAbsolutePath() );
+            }
+            int datArrayLength = fileBuffer.getInt();
+            @SuppressWarnings("unchecked")
+            DoubleArrayTrieNode<T> [] datArray = new DoubleArrayTrieNode [ datArrayLength ];
+            char [] chars = new char [ datArrayLength ];//用于校验看文件是否一致
+            int lastIndex = datArrayLength - 1;
+            while (true) {
+                int datIndex = fileBuffer.getInt();
+                chars[ datIndex ] = fileBuffer.getChar();
+                int base = fileBuffer.getInt();
+                int check = fileBuffer.getInt();
+                T value = null;
+                if (fileBuffer.get() != 0) {
+                    //dataBuffer
+                    int valueByteCount = fileBuffer.getInt();
+                    int beforePos = fileBuffer.position();
+                    int beforeLimit = fileBuffer.limit();
+                    int afterPos = beforePos + valueByteCount;
+                    fileBuffer.limit( afterPos );
+                    value = aValueDeserializer.deserialize( fileBuffer );
+                    fileBuffer.limit( beforeLimit ).position( afterPos );
+                }
+                datArray[ datIndex ] = new DoubleArrayTrieNode<T>( base, check, value );
+                if (datIndex == lastIndex) {
+                    break;
+                }
+            }
+            //再根据chars把父子关系的base和check校验一盘：childCheck == parentIndex && childIndex == parentBase + childChar 必须成立
+            for (int i = 1; i < datArrayLength; ++i) {//从1开始，虚根不用
+                DoubleArrayTrieNode<T> childDatNode = datArray[ i ];
+                if (childDatNode != null) {
+                    if (datArray[ childDatNode.mCheck ].mBase + chars[ i ] != i) {
+                        throw new Error( "Sequence Check Error: " + aInputFile.getAbsolutePath() + ":[" + i + "," + chars[ i ] + "]" );
+                    }
+                }
+            }
+            return new DoubleArrayTrie<T>( datArray );
+        }
+    }
+
+    /*
+    public static <T> void serializeDoubleArrayTrieFromFile(DoubleArrayTrie<T> aDAT, File aOutputFile, ValueSerializer<T> aValueSerializer) throws IOException {
+        try (PrintWriter datWriter = new PrintWriter( new OutputStreamWriter( new BufferedOutputStream( new FileOutputStream( aOutputFile ), 1024 << 6 ), "UTF-8" ) )) {
+            DoubleArrayTrieNode<T> [] datArray = aDAT.mDatArray;
+            int invalidBase = datArray[ 0 ].mBase - 1;//虚根的mBase一定是最小的base值，则把其他叶子节点的base值序化成小1不用Integer.MIN_VALUE
+            datWriter.println( "#BeginOutputDAT(" + datArray.length + ")" );//datArrayLength
+            for (int i = 0, isize = datArray.length; i < isize; ++i) {
+                DoubleArrayTrieNode<T> n = datArray[ i ];
+                if (n != null) {
+                    datWriter.append( Integer.toHexString( i ).toUpperCase() ).append( '\t' ).append( n.getChar( datArray, i ) ).append( '\t' ).append( Integer.toString( n.mBase == Integer.MIN_VALUE ? invalidBase : n.mBase ) ).append( '\t' ).append( Integer.toString( n.mCheck ) ).append( '\t' ).append( '[' );
+                    if (n.mValue != null) {
+                        datWriter.append( '[' ).append( aValueSerializer.serialize( n.mValue ) ).append( ']' );//内层数据也用[]
+                    }
+                    datWriter.append( ']' ).println();
+                }
+            }
+            datWriter.println( "#EndOutputDAT" );
+        }
+    }
+    */
+
+    public static <T> void serializeDoubleArrayTrieFromFile(DoubleArrayTrie<T> aDAT, File aOutputFile, ValueSerializer<T> aValueSerializer) throws IOException {
+        try (DataOutputStream datWriter = new DataOutputStream( new BufferedOutputStream( new FileOutputStream( aOutputFile ), 1024 << 6 ) )) {
+            DoubleArrayTrieNode<T> [] datArray = aDAT.mDatArray;
+            //int invalidBase = datArray[ 0 ].mBase - 1;//虚根的mBase一定是最小的base值，则把其他叶子节点的base值序化成小1不用Integer.MIN_VALUE
+            datWriter.write( "#DAT".getBytes() );//simple magic
+            datWriter.writeInt( datArray.length );//datArrayLength
+            for (int i = 0, isize = datArray.length; i < isize; ++i) {
+                DoubleArrayTrieNode<T> n = datArray[ i ];
+                if (n != null) {
+                    datWriter.writeInt( i );
+                    datWriter.writeChar( n.getChar( datArray, i ) );
+                    datWriter.writeInt( n.mBase );
+                    datWriter.writeInt( n.mCheck );
+                    if (n.mValue != null) {
+                        datWriter.write( 1 );
+                        byte [] valueBytes = aValueSerializer.serialize( n.mValue );
+                        datWriter.writeInt( valueBytes.length );
+                        datWriter.write( valueBytes );
+                    }
+                    else {
+                        datWriter.write( 0 );
+                    }
+                }
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
