@@ -202,9 +202,16 @@ public final class DoubleArrayTrieMaker {
                     datWriter.writeInt( n.mCheck );
                     if (n.mValue != null) {
                         datWriter.write( 1 );
-                        byte [] valueBytes = aValueSerializer.serialize( n.mValue );
-                        datWriter.writeInt( valueBytes.length );
-                        datWriter.write( valueBytes );
+                        ByteBuffer valueBytes = aValueSerializer.serialize( n.mValue );
+                        datWriter.writeInt( valueBytes.remaining() );
+                        if (valueBytes.hasArray()) {
+                            datWriter.write( valueBytes.array(), valueBytes.arrayOffset() + valueBytes.position(), valueBytes.remaining() );
+                        }
+                        else {
+                            while (valueBytes.hasRemaining()) {
+                                datWriter.writeByte( valueBytes.get() );
+                            }
+                        }
                     }
                     else {
                         datWriter.write( 0 );

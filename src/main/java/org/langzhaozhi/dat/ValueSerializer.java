@@ -1,5 +1,7 @@
 package org.langzhaozhi.dat;
 
+import java.nio.ByteBuffer;
+
 /**
  * <p>对参数化类型T的序列化接口,用于对DAT进行结构和内容保存，以便下次加载的时候可以快速反序列化成DAT对象。
  * 由于在从原始数据构造生成DAT的时候，我这里采用的是尽可能压缩DAT数组长度的策略，因此生成DAT可能较慢(
@@ -13,5 +15,5 @@ package org.langzhaozhi.dat;
  */
 @FunctionalInterface
 public interface ValueSerializer<T> {
-    public byte [] serialize(T aValue);
+    public ByteBuffer serialize(T aValue);
 }
