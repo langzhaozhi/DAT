@@ -201,9 +201,11 @@ public final class DoubleArrayTrie<T> {
                 aKeyBuffer.setLength( 0 );
                 //对数据节点回溯到根
                 DoubleArrayTrieNode<T> ancestorNode = aDatNode;
-                while (ancestorNode.mCheck != 0) {
-                    aKeyBuffer.append( ancestorNode.getChar( datArray, aDatNodeIndex ) );
-                    ancestorNode = datArray[ ancestorNode.mCheck ];
+                int ancestorIndex = aDatNodeIndex;
+                while (ancestorIndex != 0) {
+                    aKeyBuffer.append( ancestorNode.getChar( datArray, ancestorIndex ) );
+                    ancestorIndex = ancestorNode.mCheck;
+                    ancestorNode = datArray[ ancestorIndex ];
                 }
                 //反向一下，因为子孙节点对应的字符在前面，祖先节点对应的字符在后面
                 aKeyBuffer.reverse();
