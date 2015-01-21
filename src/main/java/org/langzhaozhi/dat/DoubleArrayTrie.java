@@ -181,6 +181,12 @@ public final class DoubleArrayTrie<T> {
     }
 
     //@ForDebugUse
+    public int getDatArrayLength() {
+        //看dat数据压缩情况：数中间空的个数
+        return this.mDatArray.length;
+    }
+
+    //@ForDebugUse
     public int getGapCount() {
         //看dat数据压缩情况：数中间空的个数
         return Arrays.stream( this.mDatArray ).mapToInt( (aNextNode) -> aNextNode == null ? 1 : 0 ).sum();
@@ -195,7 +201,7 @@ public final class DoubleArrayTrie<T> {
                 aKeyBuffer.setLength( 0 );
                 //对数据节点回溯到根
                 DoubleArrayTrieNode<T> ancestorNode = aDatNode;
-                while (aDatNodeIndex != 0) {
+                while (ancestorNode.mCheck != 0) {
                     aKeyBuffer.append( ancestorNode.getChar( datArray, aDatNodeIndex ) );
                     ancestorNode = datArray[ ancestorNode.mCheck ];
                 }
