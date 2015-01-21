@@ -18,7 +18,6 @@ public class TestSerializeDeserialize {
 
             String key = parts[ 0 ];
             String info = parts[ 1 ].substring( 1, parts[ 1 ].length() - 1 );//skip {}
-            Arrays.stream( info.split( "," ) ).forEach( (aInfo) -> System.err.println( aInfo ) );
             return new StringPair<String []>( key, info.split( "," ) );
         } ).toArray( StringPair []::new );
 
