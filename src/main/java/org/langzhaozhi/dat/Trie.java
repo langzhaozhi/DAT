@@ -211,10 +211,10 @@ public final class Trie<T> {
                 }
                 else {
                     if (midChildChar < aMatchChildChar) {
-                        low = mid + 1;
+                        low = mid == high ? mid : mid + 1;
                     }
                     else {
-                        high = mid - 1;
+                        high = mid == low ? mid : mid - 1;
                     }
                     mid = (low + high) >>> 1;//避免除以2
                     midChildChar = childrenNodes[ mid ].mChar;
