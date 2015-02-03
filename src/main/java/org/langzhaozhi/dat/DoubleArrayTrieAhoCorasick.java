@@ -9,8 +9,15 @@ import java.util.Set;
 import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
 
 /**
- * <p>极速多模式匹配,基于 Aho-Corasick</p>
+ * <p>极速多模式串匹配,基于 Aho-Corasick</p>
  * <p>不变对象，意味着一旦构造就不再改变，因此可以任意多线程并发访问。</p>
+ * <p>多模式串匹配的定义是：<b>给定一个输入字串（或称为模糊输入表达式），匹配出所有结果数据使得这些结果数据的关键字串都是此输入字串的子串。</b>
+ * 根据此定义，多模式串匹配将匹配出所有<前缀前匹配prefixBefore>和所有的<后缀前匹配suffixBefore>(参见<code>DoubleArrayTriePrefixMatcher</code>中的概念定义)，
+ * 还包括完整精确匹配的结果，以及其他所有关键字串是输入字串的子串的数据结果。之所以前缀后缀匹配的结果有限而非所有完整的前缀后缀结果，从定义上认清谁的子串就清楚了。
+ * 如果想要<前缀后匹配prefixAfter>或<后缀后匹配suffixAfter>，那么应该使用<code>DoubleArrayTriePrefixMatcher</code>或其对偶。</p>
+ * <p>提供了对输入字串（模糊输入表达式）进行大小写敏感的匹配方式还是大小写非敏感的匹配方式，一般地，建议构建数据尽量精确化使得匹配尽量采用速度更快的大小写敏感匹配方式，
+ * 例如如果数据全部都是中文汉字（无所谓大小写），那么只采用大小写敏感匹配方式就够了，建议尽量这么做，只有数据中存在英文字母大小写混杂且搜索确实要求非敏感匹配时，
+ * 才应该用非敏感匹配方式，建议尽量不要怎么做</p>
  */
 public final class DoubleArrayTrieAhoCorasick<T> {
     private DoubleArrayTrie<T> mOwnerDat;

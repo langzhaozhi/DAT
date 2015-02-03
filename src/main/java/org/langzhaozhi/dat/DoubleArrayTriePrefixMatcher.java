@@ -10,7 +10,7 @@ import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
  * <b>到底是指所有结果的关键字串是输入字串的前缀呢，还是指输入字串是所有结果的关键字串的前缀?</b>
  * 这两句有点绕，举个例子可能就明白了，随带把概念以及概念的内涵外延进行清晰严格化的定义出来：</p>
  * <p>假设输入字串是"abcdefg"，而在DAT数据中只有 "ab","abcd","abcdef","abcdefg","abcdefgH","abcdefgHI","abcdefgHIJ"
- * 为关键字的数据的7个数据，那么<b>【所有结果关键字串是输入字串的前缀】</b>就是前面4个数据，这种匹配方式被定义为<前缀前匹配prefixBefore>，
+ * 为关键字的数据的7个数据，那么<b>【所有结果的关键字串是输入字串的前缀】</b>就是前面4个数据，这种匹配方式被定义为<前缀前匹配prefixBefore>，
  * 而<b>【输入字串是所有结果的关键字串的前缀】</b>就是后面4个数据，这种匹配方式被定义成<前缀后匹配prefixAfter>。
  * 注意同输入字串相同的关键字数据 "abcdefg" 都在这两种结果当中，因为字串相同既符合<前缀前匹配prefixBefore>,也符合<前缀后匹配prefixAfter>,
  * 当然，如果仅仅进行区分大小写的完全精确匹配，应该直接调用<code>DoubleArrayTrie::exactMatch</code>

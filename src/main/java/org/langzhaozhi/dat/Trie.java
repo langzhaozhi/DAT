@@ -4,8 +4,8 @@ import java.util.Arrays;
 
 /**
  * <p>动态可变的Trie树结构，用于边插入数据边查询数据是否已经插入，二分法查找插入速度，非线程安全的，应该确保构造过程是单线程中进行的</p>
- * <p>比普通的HashMap快一些，占用内存空间更少（原因是数据量不定的情况下HashMap会不停地重新构造Hash结构或频繁的hash函数运算，
- * 要不就只能初始预留空间特别大，使得尽可能使每个对象拥有不同的hash），Trie特别适合于边构造边检查的应用情况</p>
+ * <p>Trie 比普通的HashMap占用内存空间更少，但存取速度经测试比较 Trie 要慢一点，原因在于 Trie 对每个字符匹配都采用二分折半查找。使用Trie
+ * 在于Trie树提供了相比Map更完备的功能，例如前缀匹配，还可在数据生成完成后转换成双数组DAT来提供急速的访问速度，Trie适合于边构造边检查的应用情况</p>
  * <p>构造完毕后，也就是数据不再变化时，可通过<code>toDoubleArrayTrie()</code>方法转换成双数组DAT树来提供更加极速的查询访问。注意，
  * <code>toDoubleArrayTrie()</code>调用后的DAT数据是调用时刻的一个镜像，也就是之后如果再对此Trie树做修改如增加数据等，
  * 则对已经生成的DAT没有任何影响，这就是为什么方法名叫<code>toDoubleArrayTrie()</code>而不叫"asDoubleArrayTrie()"的原因</p>
@@ -176,10 +176,47 @@ public final class Trie<T> {
     /**
      * 转换成双数组DAT树来使用，推荐应该在Trie完全构造完毕不再变化后调用此方法来转成DAT使用，
      * 返回的DAT是Trie数据的此时刻的一个镜像，意味着后续对Trie树的改变不会传导给已经构造的DAT，
+     * 注意，目前的双数组DoubleArrayTrie的构造过程比较慢，因此推荐采用离线方式持久化DAT
+     *
+     * @see DoubleArrayTrie
      */
     public DoubleArrayTrie<T> toDoubleArrayTrie() {
         return DoubleArrayTrieMaker.convert( this );
     }
+
+    /**
+     * 生成一个对偶的 Trie 树，专门用于后缀匹配，对偶的本质是字符串前后倒置，有关对偶的介绍请参见 DoubleArrayTrie，
+     * 理论都是相通的，无论是 Trie 树还是双数组 DoubleArrayTrie 其结构特征只能提供前缀匹配方式，
+     * 但采用<b>对偶方式</b>就可以完美地把前缀匹配形式变换成实质是后缀匹配的实现。
+     * @return 对偶的 Trie 树
+     */
+    /*
+    public Trie<T> toTrieDual(){
+        return null;//todo...
+    }
+    */
+
+    /**
+     * 提供<前缀前匹配prefixBefore>的实现，有关概念请参见 DoubleArrayTriePrefixMatcher
+     * @param aIntputText 输入字串
+     * @param aHit 匹配回调
+     */
+    /*
+    public void prefixBeforeMatch(String aIntputText, Hit<T> aHit){
+        //todo...
+    }
+    */
+
+    /**
+     * 提供<前缀后匹配prefixAfter>的实现，有关概念请参见 DoubleArrayTriePrefixMatcher
+     * @param aIntputText 输入字串
+     * @param aHit 匹配回调
+     */
+    /*
+    public void prefixAfterMatch(String aIntputText, Hit<T> aHit){
+        //todo...
+    }
+    */
 
     static final class TrieNode<T> {
         final char mChar;

@@ -9,12 +9,12 @@ import java.util.LinkedList;
  * <p>不变对象，意味着一旦构造就不再改变，因此可以任意多线程并发访问。</p>
  * <p><code>exactMatchSearch</code> 提供极速的完全匹配搜索方式, 只有完全匹配到参数aKey的才返回结果
  *
- * <p>如果要进行前缀串匹配，无论是<前缀前匹配>还是<前缀后匹配>(参见<code>DoubleArrayTriePrefixMatcher</code>中的概念定义)，
+ * <p>如果要进行前缀串匹配，无论是<前缀前匹配prefixBefore>还是<前缀后匹配prefixAfter>(参见<code>DoubleArrayTriePrefixMatcher</code>中的概念定义)，
  * 需要先<code>asPrefixMatcher()</code>转换成前缀匹配来调用。
- * <p>如果要进行多模式串匹配，也就是不仅仅是前缀，而是搜索包括中间、后缀等的匹配串，那么需要先<code>asAhoCorasick()</code>
+ * <p>如果要进行多模式串匹配，也就是不仅仅是<前缀前匹配prefixBefore>，而是搜索包括中间字串、有限后缀等的匹配串，那么需要先<code>asAhoCorasick()</code>
  * 转换成<code>DoubleArrayTrieAhoCorasick</code>来使用。</p>
  * <p><code>DoubleArrayTrie</code>、<code>DoubleArrayTriePrefixMatcher</code>、<code>DoubleArrayTrieAhoCorasick</code> 这三者构成完整的DAT功能体系，
- * 分别提供精确的完全匹配、前缀匹配、多模式串匹配。这里只提供前缀匹配，有关后缀匹配的问题可采用<b>对偶方式</b>转换成前缀匹配方式完美解决，
+ * 分别提供精确的完全匹配、前缀匹配、多模式串匹配。由于DAT的结构特征决定了DAT只能提供前缀匹配方式，但采用<b>对偶方式</b>就可以完美地把前缀匹配形式变换成实质是后缀匹配的实现。
  * 参见 <code>DoubleArrayTriePrefixMatcher</code> 中有关后缀对偶的方法以及 <code>DoubleArrayTrieMaker::makeDoubleArrayTrieDual</code>的有关对偶说明</p>
  *
  * <p>只能通过<code>DoubleArrayTrieMaker::makeDoubleArrayTrie</code>进行构造，或<code>DoubleArrayTrieMaker::makeDoubleArrayTrieDual</code>
