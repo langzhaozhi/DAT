@@ -35,7 +35,7 @@ public class TestSerializeDeserialize {
 
     public static void testSerialize(DoubleArrayTrie<String []> aDat, File aDatFile) throws Throwable {
         Charset utf8 = Charset.forName( "UTF-8" );
-        DoubleArrayTrieMaker.serializeDoubleArrayTrieFromFile( aDat, aDatFile, (aValue) -> {
+        DoubleArrayTrieMaker.serializeDoubleArrayTrieToFile( aDat, aDatFile, (aValue) -> {
             ByteBuffer buf = ByteBuffer.allocate( 100 );
             buf.put( ( byte )aValue.length );
             Arrays.stream( aValue ).forEach( (aInfo) -> {

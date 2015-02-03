@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.util.ArrayList;
@@ -43,6 +44,34 @@ public final class DoubleArrayTrieMaker {
         @SuppressWarnings("unchecked")
         ProccessingNode<T> [] parentNodes = queueInsert.toArray( new ProccessingNode [ queueInsert.size() ] );
         return DoubleArrayTrieMaker.construct( context, parentNodes );
+    }
+
+    /**
+     * <p>构造一个对偶DAT, 专门用于进行后缀匹配, 本质上是正向 DAT 的所有字符串数据进行前后倒置的前缀对偶方法，
+     * 也就是采用对偶的方式表面上是前缀匹配的PrefixMatch 而本质上却是后缀匹配，<b>请真正体会并深刻理解对偶的含义</b></p>
+     * <p>只有特别有后缀字符串匹配的时候，才用这种方式进行对偶化，而且，由于构造DAT的过程比较缓慢(原因是为了尽可能压缩DAT数组长度令数据饱满，
+     * 以后考虑研究一种既快速构造又大压缩的方法)因此构造DAT最好能离线进行，构造好后进行数据持久化保存，以后使用就直接快速从持久化读取加载即可。
+     * 构造对偶的DAT也建议采用离线持久化方法。见<code>DoubleArrayTrieMaker::serializeDoubleArrayTrieToFile</code>和
+     * <code>DoubleArrayTrieMaker::serializeDoubleArrayTrieToFile</code>持久化方法</p>
+     *
+     * @param aValueArray 数据
+     * @return 返回一个对偶的表面看是前缀匹配实质上是进行后缀匹配的DAT
+     *
+     * @see DoubleArrayTriePrefixMatcher
+     */
+    public static <T> DoubleArrayTrie<T> makeDoubleArrayTrieDual(StringPair<T> [] aValueArray) {
+        //先进行字符串数据的前后倒置对偶变换
+        @SuppressWarnings("unchecked")
+        StringPair<T> [] dualPair = Arrays.stream( aValueArray ).map( (aPair) -> {
+            CharSequence keyChars = aPair.mKey;
+            int charLen = keyChars.length();
+            char [] dualChars = new char [ charLen ];
+            for (int i = charLen - 1, ilast = i; i >= 0; --i) {
+                dualChars[ i ] = keyChars.charAt( ilast - i );//前后倒置生成对偶字符串
+            }
+            return new StringPair<T>( CharBuffer.wrap( dualChars ), aPair.mValue );
+        } ).toArray( StringPair []::new );
+        return DoubleArrayTrieMaker.makeDoubleArrayTrie( dualPair );
     }
 
     public static <T> DoubleArrayTrieAhoCorasick<T> makeAhoCorasick(StringPair<T> [] aValueArray) {
@@ -167,7 +196,7 @@ public final class DoubleArrayTrieMaker {
     }
 
     /*
-    public static <T> void serializeDoubleArrayTrieFromFile(DoubleArrayTrie<T> aDAT, File aOutputFile, ValueSerializer<T> aValueSerializer) throws IOException {
+    public static <T> void serializeDoubleArrayTrieToFile(DoubleArrayTrie<T> aDAT, File aOutputFile, ValueSerializer<T> aValueSerializer) throws IOException {
         try (PrintWriter datWriter = new PrintWriter( new OutputStreamWriter( new BufferedOutputStream( new FileOutputStream( aOutputFile ), 1024 << 6 ), "UTF-8" ) )) {
             DoubleArrayTrieNode<T> [] datArray = aDAT.mDatArray;
             int invalidBase = datArray[ 0 ].mBase - 1;//虚根的mBase一定是最小的base值，则把其他叶子节点的base值序化成小1不用Integer.MIN_VALUE
@@ -187,7 +216,7 @@ public final class DoubleArrayTrieMaker {
     }
     */
 
-    public static <T> void serializeDoubleArrayTrieFromFile(DoubleArrayTrie<T> aDAT, File aOutputFile, ValueSerializer<T> aValueSerializer) throws IOException {
+    public static <T> void serializeDoubleArrayTrieToFile(DoubleArrayTrie<T> aDAT, File aOutputFile, ValueSerializer<T> aValueSerializer) throws IOException {
         try (DataOutputStream datWriter = new DataOutputStream( new BufferedOutputStream( new FileOutputStream( aOutputFile ), 1024 << 6 ) )) {
             DoubleArrayTrieNode<T> [] datArray = aDAT.mDatArray;
             //int invalidBase = datArray[ 0 ].mBase - 1;//虚根的mBase一定是最小的base值，则把其他叶子节点的base值序化成小1不用Integer.MIN_VALUE

@@ -7,20 +7,28 @@ import java.util.LinkedList;
 /**
  * <p>DAT双数组Trie结构</p>
  * <p>不变对象，意味着一旦构造就不再改变，因此可以任意多线程并发访问。</p>
- * <p>exactMatchSearch 提供极速的完全匹配搜索方式, 只有完全匹配到参数aKey的才返回结果；而commonPrefixSearch
- * 则提供极速的前缀匹配搜索方式，意味着所有匹配参数aKey前缀的结果都会返回,自然也包括了完全匹配的结果，
- * 如果匹配不到就返回一个空的List</p>
+ * <p><code>exactMatchSearch</code> 提供极速的完全匹配搜索方式, 只有完全匹配到参数aKey的才返回结果
  *
- * <p>如果要进行多模式串匹配，也就是不仅仅是前缀，而是搜索包括中间、后缀等的匹配串，那么需要调用<code>asAhoCorasick()</code>
- * 转换成AhoCorasick来使用</p>
+ * <p>如果要进行前缀串匹配，无论是<前缀前匹配>还是<前缀后匹配>(参见<code>DoubleArrayTriePrefixMatcher</code>中的概念定义)，
+ * 需要先<code>asPrefixMatcher()</code>转换成前缀匹配来调用。
+ * <p>如果要进行多模式串匹配，也就是不仅仅是前缀，而是搜索包括中间、后缀等的匹配串，那么需要先<code>asAhoCorasick()</code>
+ * 转换成<code>DoubleArrayTrieAhoCorasick</code>来使用。</p>
+ * <p><code>DoubleArrayTrie</code>、<code>DoubleArrayTriePrefixMatcher</code>、<code>DoubleArrayTrieAhoCorasick</code> 这三者构成完整的DAT功能体系，
+ * 分别提供精确的完全匹配、前缀匹配、多模式串匹配。这里只提供前缀匹配，有关后缀匹配的问题可采用<b>对偶方式</b>转换成前缀匹配方式完美解决，
+ * 参见 <code>DoubleArrayTriePrefixMatcher</code> 中有关后缀对偶的方法以及 <code>DoubleArrayTrieMaker::makeDoubleArrayTrieDual</code>的有关对偶说明</p>
  *
- * <p>只能通过<code>DoubleArrayTrieMaker</code>的<code>makerDoubleArrayTrie(...)</code>进行构造</p>
+ * <p>只能通过<code>DoubleArrayTrieMaker::makeDoubleArrayTrie</code>进行构造，或<code>DoubleArrayTrieMaker::makeDoubleArrayTrieDual</code>
+ * 对偶构造，或<code>Trie::toDoubleArrayTrie</code>转换,以及<code>DoubleArrayTrieMaker::serializeDoubleArrayTrieToFile</code>和
+ * <code>DoubleArrayTrieMaker::serializeDoubleArrayTrieToFile</code>持久化方法</p>
  * @param <T>
+ *
+ * @see DoubleArrayTriePrefixMatcher
  * @see DoubleArrayTrieAhoCorasick
  */
 public final class DoubleArrayTrie<T> {
     final DoubleArrayTrieNode<T> [] mDatArray;
     private DoubleArrayTrieAhoCorasick<T> mAhoCorasick;
+    private DoubleArrayTriePrefixMatcher<T> mPrefixMatcher;
 
     DoubleArrayTrie(DoubleArrayTrieNode<T> [] aDatArray) {
         //from DoubleArrayTrieMaker.makeDoubleArrayTrie()
@@ -28,9 +36,11 @@ public final class DoubleArrayTrie<T> {
     }
 
     /**
-     * 极速的完全匹配搜索
+     * 极速的精确匹配，是一种精确化的大小写敏感的匹配方式，对每个字符完全相等的数据才返回。
+     * 如果要进行前缀匹配，需要先<code>asPrefixMatcher()</code>转换成<code>DoubleArrayTriePrefixMatcher</code>进行调用,
+     * 如果要进行多模式串匹配，需要先<code>asAhoCorasick()</code>转换成DoubleArrayTrieAhoCorasick来使用。
      */
-    public T exactMatchSearch(CharSequence aKey) {
+    public T exactMatch(CharSequence aKey) {
         DoubleArrayTrieNode<T> [] datArray = this.mDatArray;
         //总是从虚根开始
         DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
@@ -50,52 +60,6 @@ public final class DoubleArrayTrie<T> {
             parentCheck = index;
         }
         return searchNode.mValue;
-    }
-
-    /**
-     * <p>极速的前缀匹配搜索方式。注意和<code>DoubleArrayTriePrefixMatcher</code>刚好相反</p>
-     * <p>注意返回的是aKey的所有前缀的数据,而不是以aKey为前缀的结果。例如aKey为"abcdefg"的字符串，假如dat中有
-     * "ab","abcd","abcdef","abcdefg","abcdefgH","abcdefgHI","abcdefgHIJ"的数据，那么此方法就返回前四个结果，
-     * 因为前四个都是aKey的前缀或相等。而后面三个和aKey的前缀关系刚好相反，</p>
-     *
-     * @see DoubleArrayTriePrefixMatcher
-     */
-    public void commonPrefixSearch(CharSequence aKey, Hit<T> aHit) {
-        boolean whetherContinueHit = true;
-        DoubleArrayTrieNode<T> [] datArray = this.mDatArray;
-        //总是从虚根开始
-        DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
-        int parentCheck = searchNode.mCheck;
-        int keyCharLen = aKey.length();
-        if (keyCharLen == 0) {
-            //空串对应虚根节点
-            if (searchNode.mValue != null) {
-                aHit.hit( aKey, 0, 0, searchNode.mValue );
-            }
-        }
-        else {
-            for (int i = 0, datArrayLen = datArray.length; whetherContinueHit && i < keyCharLen; ++i) {
-                char nextChar = aKey.charAt( i );
-                int index = searchNode.mBase + nextChar;
-                if (index < 0 || index >= datArrayLen) {
-                    //由于mBase可能为负,因此这里计算出的index有可能在数组范围外
-                    break;
-                }
-                else {
-                    searchNode = datArray[ index ];
-                    if (searchNode == null || searchNode.mCheck != parentCheck) {
-                        //check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
-                        break;
-                    }
-                    else {
-                        if (searchNode.mValue != null) {
-                            whetherContinueHit = aHit.hit( aKey, 0, i + 1, searchNode.mValue );
-                        }
-                        parentCheck = index;
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -157,7 +121,23 @@ public final class DoubleArrayTrie<T> {
     }
 
     /**
+     * 转换成前缀匹配调用方式
+     *
+     * @see DoubleArrayTriePrefixMatcher
+     */
+    public DoubleArrayTriePrefixMatcher<T> asPrefixMatcher() {
+        DoubleArrayTriePrefixMatcher<T> prefixMatcher = this.mPrefixMatcher;
+        if (prefixMatcher == null) {
+            prefixMatcher = new DoubleArrayTriePrefixMatcher<T>( this );
+            this.mPrefixMatcher = prefixMatcher;
+        }
+        return prefixMatcher;
+    }
+
+    /**
      * 转换成急速多模式AhoCorasick调用方式
+     *
+     * @see DoubleArrayTrieAhoCorasick
      */
     public DoubleArrayTrieAhoCorasick<T> asAhoCorasick() {
         DoubleArrayTrieAhoCorasick<T> ac = this.mAhoCorasick;

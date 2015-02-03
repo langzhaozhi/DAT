@@ -23,7 +23,7 @@ public final class DoubleArrayTrieMap<T> {
     }
 
     public T get(CharSequence aKey) {
-        return this.mOwnerDat.exactMatchSearch( aKey );
+        return this.mOwnerDat.exactMatch( aKey );
     }
 
     /**
