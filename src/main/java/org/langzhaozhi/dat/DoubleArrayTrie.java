@@ -35,10 +35,10 @@ public final class DoubleArrayTrie<T> {
         //总是从虚根开始
         DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
         int parentCheck = searchNode.mCheck;
-        for (int i = 0, keyCharLen = aKey.length(); i < keyCharLen; ++i) {
+        for (int i = 0, keyCharLen = aKey.length(), datArrayLen = datArray.length; i < keyCharLen; ++i) {
             char nextChar = aKey.charAt( i );
             int index = searchNode.mBase + nextChar;
-            if (index < 0 || index >= datArray.length) {
+            if (index < 0 || index >= datArrayLen) {
                 //由于mBase可能为负,因此这里计算出的index有可能在数组范围外
                 return null;
             }
@@ -53,7 +53,12 @@ public final class DoubleArrayTrie<T> {
     }
 
     /**
-     * 极速的前缀匹配搜索方式
+     * <p>极速的前缀匹配搜索方式。注意和<code>DoubleArrayTriePrefixMatcher</code>刚好相反</p>
+     * <p>注意返回的是aKey的所有前缀的数据,而不是以aKey为前缀的结果。例如aKey为"abcdefg"的字符串，假如dat中有
+     * "ab","abcd","abcdef","abcdefg","abcdefgH","abcdefgHI","abcdefgHIJ"的数据，那么此方法就返回前四个结果，
+     * 因为前四个都是aKey的前缀或相等。而后面三个和aKey的前缀关系刚好相反，</p>
+     *
+     * @see DoubleArrayTriePrefixMatcher
      */
     public void commonPrefixSearch(CharSequence aKey, Hit<T> aHit) {
         boolean whetherContinueHit = true;
@@ -64,13 +69,15 @@ public final class DoubleArrayTrie<T> {
         int keyCharLen = aKey.length();
         if (keyCharLen == 0) {
             //空串对应虚根节点
-            aHit.hit( aKey, 0, 0, searchNode.mValue );
+            if (searchNode.mValue != null) {
+                aHit.hit( aKey, 0, 0, searchNode.mValue );
+            }
         }
         else {
-            for (int i = 0; whetherContinueHit && i < keyCharLen; ++i) {
+            for (int i = 0, datArrayLen = datArray.length; whetherContinueHit && i < keyCharLen; ++i) {
                 char nextChar = aKey.charAt( i );
                 int index = searchNode.mBase + nextChar;
-                if (index < 0 || index >= datArray.length) {
+                if (index < 0 || index >= datArrayLen) {
                     //由于mBase可能为负,因此这里计算出的index有可能在数组范围外
                     break;
                 }
