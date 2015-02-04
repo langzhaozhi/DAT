@@ -152,7 +152,7 @@ public final class DoubleArrayTriePrefixMatcher<T> {
                 break;
             }
             else {
-                HashSet<Integer> tmp = parentCheckSet;//已经被情况了的
+                HashSet<Integer> tmp = parentCheckSet;//已经被清空了的
                 parentCheckSet = thisCheckSet;
                 thisCheckSet = tmp;
             }
@@ -261,7 +261,7 @@ public final class DoubleArrayTriePrefixMatcher<T> {
                 return;
             }
             else {
-                HashSet<Integer> tmp = parentCheckSet;//已经被情况了的
+                HashSet<Integer> tmp = parentCheckSet;//已经被清空了的
                 parentCheckSet = thisCheckSet;
                 thisCheckSet = tmp;
             }
