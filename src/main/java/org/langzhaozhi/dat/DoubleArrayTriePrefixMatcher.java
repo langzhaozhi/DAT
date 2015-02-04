@@ -1,5 +1,9 @@
 package org.langzhaozhi.dat;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+
 import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
 
 /**
@@ -8,14 +12,17 @@ import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
  * <p>概念化成两种类型的前缀匹配，调用者千万要注意区别：一种叫<前缀前匹配prefixBeforeMatch>
  * 另一种叫<前缀后匹配prefixAfterMatch>。为什么要严格化定义来区分这两种前缀匹配呢？原因是我们提出搜索匹配前缀结果的问题，
  * <b>到底是指所有结果的关键字串是输入字串的前缀呢，还是指输入字串是所有结果的关键字串的前缀?</b>
- * 这两句有点绕，举个例子可能就明白了，随带把概念以及概念的内涵外延进行清晰严格化的定义出来：</p>
+ * 核心就到到底谁是谁的前缀?再举个例子可能就明白了，随带把概念以及概念的内涵外延进行清晰严格化的定义出来：</p>
  * <p>假设输入字串是"abcdefg"，而在DAT数据中只有 "ab","abcd","abcdef","abcdefg","abcdefgH","abcdefgHI","abcdefgHIJ"
  * 为关键字的数据的7个数据，那么<b>【所有结果的关键字串是输入字串的前缀】</b>就是前面4个数据 "ab","abcd","abcdef","abcdefg";
- * 而<b>【输入字串是所有结果的关键字串的前缀】</b>就是后面4个数据 "abcdefg","abcdefgH","abcdefgHI","abcdefgHIJ"。于是就有如下概念定义：<br/>
- * &#160;&#160;&#160;&#160;<b><前缀前匹配prefixBeforeMatch>：所有结果的关键字串是输入字串的前缀</b><br/>
- * &#160;&#160;&#160;&#160;<b><前缀后匹配prefixAfterMatch>：  输入字串是所有结果的关键字串的前缀</b><br/><br/>
-
- * 注意同输入字串相同的关键字数据 "abcdefg" 都在这两种结果当中，因为字串相同既符合<前缀前匹配prefixBeforeMatch>,也符合<前缀后匹配prefixAfterMatch>,
+ * 而<b>【输入字串是所有结果的关键字串的前缀】</b>就是后面4个数据 "abcdefg","abcdefgH","abcdefgHI","abcdefgHIJ"。
+ * 于是就有如下概念定义：<br/>
+ * &#160;&#160;&#160;&#160;<b><前缀前匹配prefixBeforeMatch>：匹配出DAT数据的一个最大子集，使得此子集的每个数据的关键字串是输入字串的前缀</b><br/>
+ * &#160;&#160;&#160;&#160;<b><前缀后匹配prefixAfterMatch>：  匹配出DAT数据的一个最大子集，使得输入字串是此子集的每个数据的关键字串的前缀</b><br/><br/>
+ *
+ * 这两句数学严格化定义的文字描述有点绕，其实用数学符号表示就简单多了，没办法，人类自然语言无论中文还是英文还是其它什么文都太落后了。
+ * 简单说就是看到底谁是谁的前缀，是匹配结果的关键字串是输入字串的前缀，还是输入字串是匹配结果的关键字串的前缀!
+ * 注意本例中同输入字串相同的关键字数据 "abcdefg" 都在这两种结果当中，因为字串相同既符合<前缀前匹配prefixBeforeMatch>,也符合<前缀后匹配prefixAfterMatch>,
  * 当然，如果仅仅进行区分大小写的完全精确匹配，应该直接调用<code>DoubleArrayTrie::exactMatch</code>
  * 以得到更加极速的查询速度</p>
  * <p><前缀前匹配prefixBeforeMatch>和<前缀后匹配prefixAfterMatch>这两种类型的匹配，每种都分为字符大小写敏感(CaseSensitive)的匹配和非敏感(CaseInsensitive)的匹配，
@@ -28,10 +35,10 @@ import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
  * 举例说明：假如正向DAT中只有 "ba","dcba","fedcba","gfedcba","Hgfedcba","IHgfedcba","JIHgfedcba"
  * 为关键字的数据的7个数据，现在输入字串是"gfedcba"，要求匹配出所有后缀结果。同前缀一样，这里同样要进行概念的明确化定义来明确到底什么是后缀匹配，
  * 也即同样有<后缀前匹配suffixBeforeMatch>和<后缀后匹配suffixAfterMatch>的这两种后缀匹配的对偶概念定义:<br/>
- * &#160;&#160;&#160;&#160;<b><后缀前匹配suffixBeforeMatch>：所有结果的关键字串是输入字串的后缀</b>本例中就是前面4个数据 "ba","dcba","fedcba","gfedcba"<br/>
- * &#160;&#160;&#160;&#160;<b><后缀后匹配suffixAfterMatch>：  输入字串是所有结果的关键字串的后缀</b>本例中就是后面4个数据 "gfedcba","Hgfedcba","IHgfedcba","JIHgfedcba"<br/><br/>
+ * &#160;&#160;&#160;&#160;<b><后缀前匹配suffixBeforeMatch>：匹配出DAT数据的一个最大子集，使得此子集的每个数据的关键字串是输入字串的后缀</b>本例中就是前面4个数据 "ba","dcba","fedcba","gfedcba"<br/>
+ * &#160;&#160;&#160;&#160;<b><后缀后匹配suffixAfterMatch>：  匹配出DAT数据的一个最大子集，使得输入字串是此子集的每个数据的关键字串的后缀</b>本例中就是后面4个数据 "gfedcba","Hgfedcba","IHgfedcba","JIHgfedcba"<br/><br/>
  *
- * 为了进行后缀匹配(继续本例)，例如<后缀前匹配suffixBeforeMatch>，按如下步骤：
+ * 核心理解也是看到底谁是谁的后缀。为了进行后缀匹配(继续本例)，例如<后缀前匹配suffixBeforeMatch>，按如下步骤：
  * <ol>
  * <li>对此正向DAT树生成一个对偶DAT树，此对偶DAT树包含如下7个数据："ab","abcd","abcdef","abcdefg","abcdefgH","abcdefgHI","abcdefgHIJ"</li>
  * <li>现在对输入字串"gfedcba"也进行对偶化，变换成对偶输入字串 "abcdefg"</li>
@@ -49,12 +56,15 @@ import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
 public final class DoubleArrayTriePrefixMatcher<T> {
     private DoubleArrayTrie<T> mOwnerDat;
 
+    //建立一个同DAT数组下标完全对应的Prefix的Trie树结构数组
+    private PrefixTrieNode<T> [] mPrefixTrieArray;
+
     DoubleArrayTriePrefixMatcher(DoubleArrayTrie<T> aOwnerDat) {
         this.mOwnerDat = aOwnerDat;
     }
 
     /**
-     * <p><b><前缀前匹配prefixBeforeMatch>：所有结果的关键字串是输入字串的前缀。</b>这是<b>大小写敏感</b>匹配。参见前面概念定义说明。</p>
+     * <p><b><前缀前匹配prefixBeforeMatch>：匹配结果的关键字串是输入字串的前缀。</b>这是<b>大小写敏感</b>匹配。参见前面概念定义说明。</p>
      * <p>如果是对偶DAT，本方法本质上是<后缀前匹配suffixBeforeMatch>的大小写敏感匹配实现,此时的输入字串aInputText也应该是正向DAT输入字串的对偶</p>
      * @param aInputText 输入字串
      * @param aHit 匹配后的回调
@@ -65,66 +75,255 @@ public final class DoubleArrayTriePrefixMatcher<T> {
         //总是从虚根开始
         DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
         int parentCheck = searchNode.mCheck;
-        int keyCharLen = aInputText.length();
-        if (keyCharLen == 0) {
-            //空串对应虚根节点
-            if (searchNode.mValue != null) {
-                aHit.hit( aInputText, 0, 0, searchNode.mValue );
+        for (int i = 0, keyCharLen = aInputText.length(), datArrayLen = datArray.length; whetherContinueHit && i < keyCharLen; ++i) {
+            char nextChar = aInputText.charAt( i );
+            int index = searchNode.mBase + nextChar;
+            if (index < 0 || index >= datArrayLen) {
+                //由于mBase可能为负,因此这里计算出的index有可能在数组范围外
+                break;
             }
-        }
-        else {
-            for (int i = 0, datArrayLen = datArray.length; whetherContinueHit && i < keyCharLen; ++i) {
-                char nextChar = aInputText.charAt( i );
-                int index = searchNode.mBase + nextChar;
-                if (index < 0 || index >= datArrayLen) {
-                    //由于mBase可能为负,因此这里计算出的index有可能在数组范围外
+            else {
+                searchNode = datArray[ index ];
+                if (searchNode == null || searchNode.mCheck != parentCheck) {
+                    //check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
                     break;
                 }
                 else {
-                    searchNode = datArray[ index ];
-                    if (searchNode == null || searchNode.mCheck != parentCheck) {
-                        //check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
-                        break;
+                    if (searchNode.mValue != null) {
+                        whetherContinueHit = aHit.hit( aInputText, 0, i + 1, searchNode.mValue );
                     }
-                    else {
-                        if (searchNode.mValue != null) {
-                            whetherContinueHit = aHit.hit( aInputText, 0, i + 1, searchNode.mValue );
-                        }
-                        parentCheck = index;
-                    }
+                    parentCheck = index;
                 }
             }
         }
     }
 
     /**
-     * <p><b><前缀前匹配prefixBeforeMatch>：所有结果的关键字串是输入字串的前缀。</b>这是<b>大小写非敏感</b>匹配,也即不区分大小写,速度稍慢。参见前面概念定义说明。</p>
+     * <p><b><前缀前匹配prefixBeforeMatch>：匹配结果的关键字串是输入字串的前缀。</b>这是<b>大小写非敏感</b>匹配,也即不区分大小写,速度稍慢。参见前面概念定义说明。</p>
      * <p>如果是对偶DAT，本方法本质上是<后缀前匹配suffixBeforeMatch>的大小写非敏感匹配实现,此时的输入字串aInputText也应该是正向DAT输入字串的对偶</p>
      * @param aInputText 输入字串
      * @param aHit 匹配后的回调
      */
     public void prefixBeforeMatchCaseInsensitive(CharSequence aInputText, Hit<T> aHit) {
-        //todo...
+        boolean whetherContinueHit = true;
+        DoubleArrayTrieNode<T> [] datArray = this.mOwnerDat.mDatArray;
+        //总是从虚根开始
+        DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
+        HashSet<Integer> parentCheckSet = new HashSet<Integer>();
+        HashSet<Integer> thisCheckSet = new HashSet<Integer>();
+        parentCheckSet.add( searchNode.mCheck );//always root as first parent
+        for (int i = 0, keyCharLen = aInputText.length(), datArrayLen = datArray.length; whetherContinueHit && i < keyCharLen; ++i) {
+            char oneChar = aInputText.charAt( i );
+            char twoChar = Character.isUpperCase( oneChar ) ? Character.toLowerCase( oneChar ) : (Character.isLowerCase( oneChar ) ? Character.toUpperCase( oneChar ) : oneChar);
+
+            for (Iterator<Integer> preIt = parentCheckSet.iterator(); preIt.hasNext();) {
+                int parentCheck = preIt.next();
+                preIt.remove();//迭代清空
+
+                for (int j = 0, jsize = oneChar == twoChar ? 1 : 2; j < jsize; ++j) {
+                    char nextChar = j == 0 ? oneChar : twoChar;
+                    int index = searchNode.mBase + nextChar;
+                    if (index < 0 || index >= datArrayLen) {
+                        //nothing to do:由于mBase可能为负,因此这里计算出的index有可能在数组范围外
+                    }
+                    else {
+                        searchNode = datArray[ index ];
+                        if (searchNode == null || searchNode.mCheck != parentCheck) {
+                            //nothing to do:check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
+                        }
+                        else {
+                            if (searchNode.mValue != null) {
+                                whetherContinueHit = aHit.hit( aInputText, 0, i + 1, searchNode.mValue );
+                            }
+                            thisCheckSet.add( index );//记录下一层的parentCheck
+                        }
+                    }
+                }
+            }
+            if (thisCheckSet.isEmpty()) {
+                //说明当前字符无论大小写都没有匹配到数据，后面的不用匹配了
+                break;
+            }
+            else {
+                HashSet<Integer> tmp = parentCheckSet;//已经被情况了的
+                parentCheckSet = thisCheckSet;
+                thisCheckSet = tmp;
+            }
+        }
     }
 
     /**
-     * <p><b><前缀后匹配prefixAfterMatch>：输入字串是所有结果的关键字串的前缀。</b>这是<b>大小写敏感</b>匹配。参见前面概念定义说明。</p>
+     * <p><b><前缀后匹配prefixAfterMatch>：输入字串是匹配结果的关键字串的前缀。</b>这是<b>大小写敏感</b>匹配。参见前面概念定义说明。</p>
      * <p>如果是对偶DAT，本方法本质上是<后缀后匹配suffixAfterMatch>的大小写敏感匹配实现,此时的输入字串aInputText也应该是正向DAT输入字串的对偶</p>
      * @param aInputText 输入字串
      * @param aHit 匹配后的回调
      */
     public void prefixAfterMatchCaseSensitive(CharSequence aInputText, Hit<T> aHit) {
-        //todo...
+        int keyCharLen = aInputText.length();
+        if (keyCharLen == 0) {
+            //不支持空串，因为全匹配实在是无意义的空耗
+            return;
+        }
+        DoubleArrayTrieNode<T> [] datArray = this.mOwnerDat.mDatArray;
+        //总是从虚根开始，先匹配出所有 aInputText 的前缀
+        DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
+        int parentCheck = searchNode.mCheck;
+        for (int i = 0, datArrayLen = datArray.length; i < keyCharLen; ++i) {
+            char nextChar = aInputText.charAt( i );
+            int index = searchNode.mBase + nextChar;
+            if (index < 0 || index >= datArrayLen) {
+                //由于mBase可能为负,因此这里计算出的index有可能在数组范围外
+                return;//直接结束，因为找不到任何数据使得输入字串是此数据的前缀
+            }
+            else {
+                searchNode = datArray[ index ];
+                if (searchNode == null || searchNode.mCheck != parentCheck) {
+                    //check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
+                    return;//直接结束，因为找不到任何数据使得输入字串是此数据的前缀
+                }
+                else {
+                    parentCheck = index;
+                }
+            }
+        }
+        //走到这里说明已经把输入字串aInputText每个字符都匹配到了,就从parentCheck位置的节点分支开始遍历所有子孙即可
+        searchNode = datArray[ parentCheck ];
+        if (searchNode.mValue != null) {
+            //先通知自身相等串
+            if (!aHit.hit( aInputText, 0, aInputText.length(), searchNode.mValue )) {
+                return;
+            }
+        }
+        PrefixTrieNode<T> [] prefixTrieArray = this.getPrefixTrieArray();
+        PrefixTrieNode<T> branchRootPrefixNode = prefixTrieArray[ parentCheck ];
+        StringBuilder keyCharBuffer = new StringBuilder( aInputText );
+        if (branchRootPrefixNode.mChildrenIndexes != null) {
+            branchRootPrefixNode.prefixAfterMatch( datArray, prefixTrieArray, keyCharBuffer, aHit );
+        }
     }
 
     /**
-     * <p><b><前缀后匹配prefixAfterMatch>：输入字串是所有结果的关键字串的前缀。</b>这是<b>大小写非敏感</b>匹配,也即不区分大小写,速度稍慢。参见前面概念定义说明。</p>
+     * <p><b><前缀后匹配prefixAfterMatch>：输入字串是匹配结果的关键字串的前缀。</b>这是<b>大小写非敏感</b>匹配,也即不区分大小写,速度稍慢。参见前面概念定义说明。</p>
      * <p>如果是对偶DAT，本方法本质上是<后缀后匹配suffixAfterMatch>的大小写非敏感匹配实现,此时的输入字串aInputText也应该是正向DAT输入字串的对偶</p>
      * @param aInputText 输入字串
      * @param aHit 匹配后的回调
      */
     public void prefixAfterMatchCaseInsensitive(CharSequence aInputText, Hit<T> aHit) {
-        //todo...
+        int keyCharLen = aInputText.length();
+        if (keyCharLen == 0) {
+            //不支持空串，因为全匹配实在是无意义的空耗
+            return;
+        }
+        DoubleArrayTrieNode<T> [] datArray = this.mOwnerDat.mDatArray;
+        //总是从虚根开始
+        DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
+        HashSet<Integer> parentCheckSet = new HashSet<Integer>();
+        HashSet<Integer> thisCheckSet = new HashSet<Integer>();
+        parentCheckSet.add( searchNode.mCheck );//always root as first parent
+        for (int i = 0, datArrayLen = datArray.length; i < keyCharLen; ++i) {
+            char oneChar = aInputText.charAt( i );
+            char twoChar = Character.isUpperCase( oneChar ) ? Character.toLowerCase( oneChar ) : (Character.isLowerCase( oneChar ) ? Character.toUpperCase( oneChar ) : oneChar);
+
+            for (Iterator<Integer> preIt = parentCheckSet.iterator(); preIt.hasNext();) {
+                int parentCheck = preIt.next();
+                preIt.remove();//迭代清空
+
+                for (int j = 0, jsize = oneChar == twoChar ? 1 : 2; j < jsize; ++j) {
+                    char nextChar = j == 0 ? oneChar : twoChar;
+                    int index = searchNode.mBase + nextChar;
+                    if (index < 0 || index >= datArrayLen) {
+                        //nothing to do:由于mBase可能为负,因此这里计算出的index有可能在数组范围外
+                    }
+                    else {
+                        searchNode = datArray[ index ];
+                        if (searchNode == null || searchNode.mCheck != parentCheck) {
+                            //nothing to do:check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
+                        }
+                        else {
+                            thisCheckSet.add( index );//记录下一层的parentCheck
+                        }
+                    }
+                }
+            }
+            if (thisCheckSet.isEmpty()) {
+                //直接结束，因为找不到任何数据使得输入字串是此数据的前缀
+                return;
+            }
+            else {
+                HashSet<Integer> tmp = parentCheckSet;//已经被情况了的
+                parentCheckSet = thisCheckSet;
+                thisCheckSet = tmp;
+            }
+        }
+        //走到这里说明已经把输入字串aInputText每个字符都匹配到了,就从parentCheckSet中位置的节点分支开始遍历所有子孙即可
+        for (Integer parentCheck : parentCheckSet) {
+            searchNode = datArray[ parentCheck ];
+            if (searchNode.mValue != null) {
+                //先通知自身相等串,这里的相等可能是大小写非敏感意义下的相等，如a相等成A
+                if (!aHit.hit( aInputText, 0, aInputText.length(), searchNode.mValue )) {
+                    return;
+                }
+            }
+            PrefixTrieNode<T> [] prefixTrieArray = this.getPrefixTrieArray();
+            PrefixTrieNode<T> branchRootPrefixNode = prefixTrieArray[ parentCheck ];
+            StringBuilder keyCharBuffer = new StringBuilder( aInputText );
+            if (branchRootPrefixNode.mChildrenIndexes != null) {
+                if (!branchRootPrefixNode.prefixAfterMatch( datArray, prefixTrieArray, keyCharBuffer, aHit )) {
+                    return;
+                }
+            }
+        }
+    }
+
+    private PrefixTrieNode<T> [] getPrefixTrieArray() {
+        //只有<前缀后匹配prefixAfterMatch>的时候采用用到，因此采用延迟初始化构造整棵Trie结构
+        //不变对象指内部结构或状态的实质改变，例如增删DAT数据，而这里建立Trie结构和改变DAT数据无关，
+        //本质上是类似缓存用途性质的，因此依然符合不变对象。
+        if (this.mPrefixTrieArray == null) {
+            //扫描一遍就建立trie结构，很快
+            DoubleArrayTrieNode<T> [] datArray = this.mOwnerDat.mDatArray;
+            int datArrayLength = datArray.length;
+            @SuppressWarnings("unchecked")
+            PrefixTrieNode<T> [] prefixTrieArray = new PrefixTrieNode [ datArrayLength ];
+            for (int i = 0; i < datArrayLength; ++i) {
+                if (datArray[ i ] != null) {
+                    prefixTrieArray[ i ] = new PrefixTrieNode<T>();
+                }
+            }
+            @SuppressWarnings("unchecked")
+            LinkedList<Integer> [] trie = new LinkedList [ datArrayLength ];
+            for (int i = 1; i < datArrayLength; ++i) {//从1开始，0是虚根
+                DoubleArrayTrieNode<T> datNode = datArray[ i ];
+                if (datNode != null) {
+                    //其实就是根据mCheck找到父亲节点建立父子关系
+                    int parentIndex = datNode.mCheck;
+                    LinkedList<Integer> childrenOfParentNode = trie[ parentIndex ];
+                    if (childrenOfParentNode == null) {
+                        childrenOfParentNode = new LinkedList<Integer>();
+                        trie[ parentIndex ] = childrenOfParentNode;
+                    }
+                    childrenOfParentNode.add( i );
+                }
+            }
+            LinkedList<Integer> indexQueue = new LinkedList<Integer>();
+            indexQueue.addLast( 0 );
+            while (!indexQueue.isEmpty()) {
+                Integer parentIndex = indexQueue.removeFirst();
+                LinkedList<Integer> childrenIndexesList = trie[ parentIndex ];
+                int [] childrenIndexes = new int [ childrenIndexesList.size() ];
+                int from = 0;
+                for (Iterator<Integer> it = childrenIndexesList.iterator(); it.hasNext();) {
+                    Integer nextChildIndex = it.next();
+                    indexQueue.addLast( nextChildIndex );
+                    childrenIndexes[ from++ ] = nextChildIndex;
+                    it.remove();//fast GC it
+                }
+                //建立Trie的父子关系
+                prefixTrieArray[ parentIndex ].mChildrenIndexes = childrenIndexes;
+            }
+            this.mPrefixTrieArray = prefixTrieArray;
+        }
+        return this.mPrefixTrieArray;
     }
 
     /**
@@ -132,5 +331,39 @@ public final class DoubleArrayTriePrefixMatcher<T> {
      */
     public DoubleArrayTrie<T> asDoubleArrayTrie() {
         return this.mOwnerDat;
+    }
+
+    static final class PrefixTrieNode<T> {
+        //各个儿子在DAT数组中的下标,形成一棵完整的Trie树结构,目的是进行快速的层层遍历
+        int [] mChildrenIndexes;
+
+        PrefixTrieNode() {
+        }
+
+        boolean prefixAfterMatch(DoubleArrayTrieNode<T> [] aDatArray, PrefixTrieNode<T> [] aPrefixArray, StringBuilder aKeyCharBuffer, Hit<T> aHit) {
+            int [] childrenIndexes = this.mChildrenIndexes;
+            int keyCharLength = aKeyCharBuffer.length();
+            int childKeyCharLength = keyCharLength + 1;
+            for (int i = 0, childCount = childrenIndexes.length; i < childCount; ++i) {
+                int nextChildNodeIndex = childrenIndexes[ i ];
+                DoubleArrayTrieNode<T> nextChildDatNode = aDatArray[ nextChildNodeIndex ];
+                PrefixTrieNode<T> nextChildPrefixNode = aPrefixArray[ nextChildNodeIndex ];
+
+                aKeyCharBuffer.append( aDatArray[ i ].getChar( aDatArray, nextChildNodeIndex ) );
+                if (nextChildDatNode.mValue != null) {
+                    if (!aHit.hit( aKeyCharBuffer, 0, childKeyCharLength, nextChildDatNode.mValue )) {
+                        return false;
+                    }
+                }
+                if (!nextChildPrefixNode.prefixAfterMatch( aDatArray, aPrefixArray, aKeyCharBuffer, aHit )) {
+                    return false;
+                }
+                if (nextChildPrefixNode.mChildrenIndexes != null) {
+                    nextChildPrefixNode.prefixAfterMatch( aDatArray, aPrefixArray, aKeyCharBuffer, aHit );
+                }
+                aKeyCharBuffer.setLength( keyCharLength );
+            }
+            return true;
+        }
     }
 }

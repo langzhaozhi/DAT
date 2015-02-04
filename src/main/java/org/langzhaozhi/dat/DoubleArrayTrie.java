@@ -87,7 +87,7 @@ public final class DoubleArrayTrie<T> {
         boolean whetherContinueHit = true;
         StringBuilder keyBuffer = aNeedKey ? new StringBuilder() : null;
         DoubleArrayTrieNode<T> [] datArray = this.mDatArray;
-        int datArrayLength = this.mDatArray.length;
+        int datArrayLength = datArray.length;
         //扫描一遍就建立trie结构，很快
         @SuppressWarnings("unchecked")
         LinkedList<Integer> [] trie = new LinkedList [ datArrayLength ];
