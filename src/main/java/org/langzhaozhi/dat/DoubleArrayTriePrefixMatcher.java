@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
+import org.langzhaozhi.util.IntHash;
 
 /**
  * <p>DAT的前缀结果匹配, 通过<code>DoubleArrayTrie.asPrefixMatcher()</code>来使用</p>
@@ -105,37 +106,43 @@ public final class DoubleArrayTriePrefixMatcher<T> {
      * @param aHit 匹配后的回调
      */
     public void prefixBeforeMatchCaseInsensitive(CharSequence aInputText, Hit<T> aHit) {
-        boolean whetherContinueHit = true;
         DoubleArrayTrieNode<T> [] datArray = this.mOwnerDat.mDatArray;
-        //总是从虚根开始
-        DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
         HashSet<Integer> parentCheckSet = new HashSet<Integer>();
         HashSet<Integer> thisCheckSet = new HashSet<Integer>();
-        parentCheckSet.add( searchNode.mCheck );//always root as first parent
-        for (int i = 0, keyCharLen = aInputText.length(), datArrayLen = datArray.length; whetherContinueHit && i < keyCharLen; ++i) {
+        //记录真正匹配到的关键字串,以便正确 hit 回调的时候把DAT中对应的真正关键字进行通知
+        IntHash<String> matchedKeys = new IntHash<String>( aInputText.length() );
+        matchedKeys.put( 0, "" );//虚根对应空串
+        parentCheckSet.add( datArray[ 0 ].mCheck );//always root as first parent
+        for (int i = 0, keyCharLen = aInputText.length(), datArrayLen = datArray.length; i < keyCharLen; ++i) {
             char oneChar = aInputText.charAt( i );
             char twoChar = Character.isUpperCase( oneChar ) ? Character.toLowerCase( oneChar ) : (Character.isLowerCase( oneChar ) ? Character.toUpperCase( oneChar ) : oneChar);
 
-            for (Iterator<Integer> preIt = parentCheckSet.iterator(); preIt.hasNext();) {
-                int parentCheck = preIt.next();
-                preIt.remove();//迭代清空
+            for (Iterator<Integer> parentIterator = parentCheckSet.iterator(); parentIterator.hasNext();) {
+                int parentCheck = parentIterator.next();
+                DoubleArrayTrieNode<T> parentDatNode = datArray[ parentCheck ];
+                parentIterator.remove();//迭代清空
+                String parentKey = matchedKeys.get( parentCheck );
 
                 for (int j = 0, jsize = oneChar == twoChar ? 1 : 2; j < jsize; ++j) {
                     char nextChar = j == 0 ? oneChar : twoChar;
-                    int index = searchNode.mBase + nextChar;
+                    int index = parentDatNode.mBase + nextChar;
                     if (index < 0 || index >= datArrayLen) {
                         //nothing to do:由于mBase可能为负,因此这里计算出的index有可能在数组范围外
                     }
                     else {
-                        searchNode = datArray[ index ];
-                        if (searchNode == null || searchNode.mCheck != parentCheck) {
+                        DoubleArrayTrieNode<T> childDatNode = datArray[ index ];
+                        if (childDatNode == null || childDatNode.mCheck != parentCheck) {
                             //nothing to do:check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
                         }
                         else {
-                            if (searchNode.mValue != null) {
-                                whetherContinueHit = aHit.hit( aInputText, 0, i + 1, searchNode.mValue );
+                            String childKey = parentKey + nextChar;
+                            if (childDatNode.mValue != null) {
+                                if (!aHit.hit( childKey, 0, i + 1, childDatNode.mValue )) {
+                                    return;
+                                }
                             }
                             thisCheckSet.add( index );//记录下一层的parentCheck
+                            matchedKeys.put( index, childKey );
                         }
                     }
                 }
@@ -215,38 +222,42 @@ public final class DoubleArrayTriePrefixMatcher<T> {
             return;
         }
         DoubleArrayTrieNode<T> [] datArray = this.mOwnerDat.mDatArray;
-        //总是从虚根开始
-        DoubleArrayTrieNode<T> searchNode = datArray[ 0 ];
         HashSet<Integer> parentCheckSet = new HashSet<Integer>();
         HashSet<Integer> thisCheckSet = new HashSet<Integer>();
-        parentCheckSet.add( searchNode.mCheck );//always root as first parent
+        IntHash<String> matchedKeys = new IntHash<String>( aInputText.length() );
+        matchedKeys.put( 0, "" );//虚根对应空串
+        parentCheckSet.add( datArray[ 0 ].mCheck );//always root as first parent
         for (int i = 0, datArrayLen = datArray.length; i < keyCharLen; ++i) {
             char oneChar = aInputText.charAt( i );
             char twoChar = Character.isUpperCase( oneChar ) ? Character.toLowerCase( oneChar ) : (Character.isLowerCase( oneChar ) ? Character.toUpperCase( oneChar ) : oneChar);
 
-            for (Iterator<Integer> preIt = parentCheckSet.iterator(); preIt.hasNext();) {
-                int parentCheck = preIt.next();
-                preIt.remove();//迭代清空
+            for (Iterator<Integer> parentIterator = parentCheckSet.iterator(); parentIterator.hasNext();) {
+                int parentCheck = parentIterator.next();
+                DoubleArrayTrieNode<T> parentDatNode = datArray[ parentCheck ];
+                parentIterator.remove();//迭代清空
+                String parentKey = matchedKeys.get( parentCheck );
 
                 for (int j = 0, jsize = oneChar == twoChar ? 1 : 2; j < jsize; ++j) {
                     char nextChar = j == 0 ? oneChar : twoChar;
-                    int index = searchNode.mBase + nextChar;
+                    int index = parentDatNode.mBase + nextChar;
                     if (index < 0 || index >= datArrayLen) {
                         //nothing to do:由于mBase可能为负,因此这里计算出的index有可能在数组范围外
                     }
                     else {
-                        searchNode = datArray[ index ];
-                        if (searchNode == null || searchNode.mCheck != parentCheck) {
+                        DoubleArrayTrieNode<T> childDatNode = datArray[ index ];
+                        if (childDatNode == null || childDatNode.mCheck != parentCheck) {
                             //nothing to do:check检查非常关键，如果check不相等，此 searchNode 肯定不是后继节点
                         }
                         else {
                             thisCheckSet.add( index );//记录下一层的parentCheck
+                            String childKey = parentKey + nextChar;
+                            matchedKeys.put( index, childKey );
                         }
                     }
                 }
             }
             if (thisCheckSet.isEmpty()) {
-                //直接结束，因为找不到任何数据使得输入字串是此数据的前缀
+                //直接结束，因为找不到任何数据使得输入字串是此数据的前缀,而且是不区分大小写也找不到
                 return;
             }
             else {
@@ -257,16 +268,17 @@ public final class DoubleArrayTriePrefixMatcher<T> {
         }
         //走到这里说明已经把输入字串aInputText每个字符都匹配到了,就从parentCheckSet中位置的节点分支开始遍历所有子孙即可
         for (Integer parentCheck : parentCheckSet) {
-            searchNode = datArray[ parentCheck ];
+            DoubleArrayTrieNode<T> searchNode = datArray[ parentCheck ];
+            String realKey = matchedKeys.get( parentCheck );
             if (searchNode.mValue != null) {
                 //先通知自身相等串,这里的相等可能是大小写非敏感意义下的相等，如a相等成A
-                if (!aHit.hit( aInputText, 0, aInputText.length(), searchNode.mValue )) {
+                if (!aHit.hit( realKey, 0, aInputText.length(), searchNode.mValue )) {
                     return;
                 }
             }
             PrefixTrieNode<T> [] prefixTrieArray = this.getPrefixTrieArray();
             PrefixTrieNode<T> branchRootPrefixNode = prefixTrieArray[ parentCheck ];
-            StringBuilder keyCharBuffer = new StringBuilder( aInputText );
+            StringBuilder keyCharBuffer = new StringBuilder( realKey );
             if (branchRootPrefixNode.mChildrenIndexes != null) {
                 if (!branchRootPrefixNode.prefixAfterMatch( datArray, prefixTrieArray, keyCharBuffer, aHit )) {
                     return;
@@ -293,10 +305,10 @@ public final class DoubleArrayTriePrefixMatcher<T> {
             @SuppressWarnings("unchecked")
             LinkedList<Integer> [] trie = new LinkedList [ datArrayLength ];
             for (int i = 1; i < datArrayLength; ++i) {//从1开始，0是虚根
-                DoubleArrayTrieNode<T> datNode = datArray[ i ];
-                if (datNode != null) {
+                DoubleArrayTrieNode<T> parentDatNode = datArray[ i ];
+                if (parentDatNode != null) {
                     //其实就是根据mCheck找到父亲节点建立父子关系
-                    int parentIndex = datNode.mCheck;
+                    int parentIndex = parentDatNode.mCheck;
                     LinkedList<Integer> childrenOfParentNode = trie[ parentIndex ];
                     if (childrenOfParentNode == null) {
                         childrenOfParentNode = new LinkedList<Integer>();
@@ -314,7 +326,9 @@ public final class DoubleArrayTriePrefixMatcher<T> {
                 int from = 0;
                 for (Iterator<Integer> it = childrenIndexesList.iterator(); it.hasNext();) {
                     Integer nextChildIndex = it.next();
-                    indexQueue.addLast( nextChildIndex );
+                    if (trie[ nextChildIndex ] != null) {
+                        indexQueue.addLast( nextChildIndex );
+                    }
                     childrenIndexes[ from++ ] = nextChildIndex;
                     it.remove();//fast GC it
                 }
@@ -349,17 +363,17 @@ public final class DoubleArrayTriePrefixMatcher<T> {
                 DoubleArrayTrieNode<T> nextChildDatNode = aDatArray[ nextChildNodeIndex ];
                 PrefixTrieNode<T> nextChildPrefixNode = aPrefixArray[ nextChildNodeIndex ];
 
-                aKeyCharBuffer.append( aDatArray[ i ].getChar( aDatArray, nextChildNodeIndex ) );
+                char cc = aDatArray[ nextChildNodeIndex ].getChar( aDatArray, nextChildNodeIndex );
+                aKeyCharBuffer.append( cc );
                 if (nextChildDatNode.mValue != null) {
                     if (!aHit.hit( aKeyCharBuffer, 0, childKeyCharLength, nextChildDatNode.mValue )) {
                         return false;
                     }
                 }
-                if (!nextChildPrefixNode.prefixAfterMatch( aDatArray, aPrefixArray, aKeyCharBuffer, aHit )) {
-                    return false;
-                }
                 if (nextChildPrefixNode.mChildrenIndexes != null) {
-                    nextChildPrefixNode.prefixAfterMatch( aDatArray, aPrefixArray, aKeyCharBuffer, aHit );
+                    if (!nextChildPrefixNode.prefixAfterMatch( aDatArray, aPrefixArray, aKeyCharBuffer, aHit )) {
+                        return false;
+                    }
                 }
                 aKeyCharBuffer.setLength( keyCharLength );
             }

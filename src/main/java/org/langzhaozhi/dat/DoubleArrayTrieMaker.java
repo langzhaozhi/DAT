@@ -17,7 +17,7 @@ import java.util.Map;
 
 import org.langzhaozhi.dat.DoubleArrayTrie.DoubleArrayTrieNode;
 import org.langzhaozhi.dat.Trie.TrieNode;
-import org.langzhaozhi.util.StringPair;
+import org.langzhaozhi.util.PairString;
 
 /**
  * DAT生成器：构建 DoubleArrayTrie
@@ -29,7 +29,7 @@ public final class DoubleArrayTrieMaker {
      * @param aValueArray 数据
      * @return DAT
      */
-    public static <T> DoubleArrayTrie<T> makeDoubleArrayTrie(StringPair<T> [] aValueArray) {
+    public static <T> DoubleArrayTrie<T> makeDoubleArrayTrie(PairString<T> [] aValueArray) {
         //先排字典序才能后续处理：采用并行排序，当数据量大就真的显示出并行排序的威力了，数据量小的话Arrays.parallelSort自动按照普通排序做
         Arrays.parallelSort( aValueArray );
 
@@ -65,32 +65,32 @@ public final class DoubleArrayTrieMaker {
      *
      * @see DoubleArrayTriePrefixMatcher
      */
-    public static <T> DoubleArrayTrie<T> makeDoubleArrayTrieDual(StringPair<T> [] aValueArray) {
+    public static <T> DoubleArrayTrie<T> makeDoubleArrayTrieDual(PairString<T> [] aValueArray) {
         //先进行字符串数据的前后倒置对偶变换
         @SuppressWarnings("unchecked")
-        StringPair<T> [] dualPair = Arrays.stream( aValueArray ).map( (aPair) -> {
+        PairString<T> [] dualPair = Arrays.stream( aValueArray ).map( (aPair) -> {
             CharSequence keyChars = aPair.mKey;
             int charLen = keyChars.length();
             char [] dualChars = new char [ charLen ];
             for (int i = charLen - 1, ilast = i; i >= 0; --i) {
                 dualChars[ i ] = keyChars.charAt( ilast - i );//前后倒置生成对偶字符串
             }
-            return new StringPair<T>( CharBuffer.wrap( dualChars ), aPair.mValue );
-        } ).toArray( StringPair []::new );
+            return new PairString<T>( CharBuffer.wrap( dualChars ), aPair.mValue );
+        } ).toArray( PairString []::new );
         return DoubleArrayTrieMaker.makeDoubleArrayTrie( dualPair );
     }
 
-    public static <T> DoubleArrayTrieAhoCorasick<T> makeAhoCorasick(StringPair<T> [] aValueArray) {
+    public static <T> DoubleArrayTrieAhoCorasick<T> makeAhoCorasick(PairString<T> [] aValueArray) {
         return DoubleArrayTrieMaker.makeDoubleArrayTrie( aValueArray ).asAhoCorasick();
     }
 
-    public static <T> DoubleArrayTrieMap<T> makeMap(StringPair<T> [] aValueArray) {
+    public static <T> DoubleArrayTrieMap<T> makeMap(PairString<T> [] aValueArray) {
         return DoubleArrayTrieMaker.makeDoubleArrayTrie( aValueArray ).asMap();
     }
 
     public static <T> DoubleArrayTrieMap<T> convert(Map<String, T> aLowSpeedMap) {
         @SuppressWarnings("unchecked")
-        StringPair<T> [] pairs = aLowSpeedMap.entrySet().stream().map( (aNextEntry) -> new StringPair<T>( aNextEntry.getKey(), aNextEntry.getValue() ) ).toArray( StringPair []::new );
+        PairString<T> [] pairs = aLowSpeedMap.entrySet().stream().map( (aNextEntry) -> new PairString<T>( aNextEntry.getKey(), aNextEntry.getValue() ) ).toArray( PairString []::new );
         return DoubleArrayTrieMaker.makeMap( pairs );
     }
 
@@ -219,10 +219,10 @@ public final class DoubleArrayTrieMaker {
 
     private static <T> void fetch(MakeContext<T> aContext, LinkedList<ProccessingNode<T>> aQueue, ProccessingNode<T> aParentNode) {
         //根据字典序构造下层Trie结构, childrenNodeList 就是 aParentNode 的儿子
-        StringPair<T> [] valueArray = aContext.mValueArray;
+        PairString<T> [] valueArray = aContext.mValueArray;
         ArrayList<ProccessingNode<T>> childrenNodeList = null;
         for (int i = aParentNode.mLeft, size = aParentNode.mRight, preChar = -1, parentDepth = aParentNode.mDepth, childDepth = parentDepth + 1; i < size; ++i) {
-            StringPair<T> nextValue = valueArray[ i ];
+            PairString<T> nextValue = valueArray[ i ];
             int keyCharCount = nextValue.mKey.length();
             if (keyCharCount > parentDepth) {
                 char childChar = nextValue.mKey.charAt( parentDepth );
@@ -354,13 +354,13 @@ public final class DoubleArrayTrieMaker {
      * 构建DAT的上下文对象,用于保存构建过程中的数据
      */
     private static final class MakeContext<T> {
-        StringPair<T> [] mValueArray;
+        PairString<T> [] mValueArray;
         ProccessingNode<T> [] mDatArray;
         //mNextFirstEmptyIndex表示dat数组第一个空位的位置,后面的dat构建过程就是从插入下标1的位置开始,因为下标0是虚根的嘛
         int mNextFirstEmptyIndex = 1;
         ArrayList<ProccessingNode<T>> mCacheChildNodeList;
 
-        MakeContext(StringPair<T> [] aValueArray) {
+        MakeContext(PairString<T> [] aValueArray) {
             this( aValueArray.length );
             this.mValueArray = aValueArray;
             //避免每次创建用途的cache

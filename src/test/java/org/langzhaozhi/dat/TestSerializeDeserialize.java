@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-import org.langzhaozhi.util.StringPair;
+import org.langzhaozhi.util.PairString;
 
 public class TestSerializeDeserialize {
     public static void main(String [] arge) throws Throwable {
@@ -13,13 +13,13 @@ public class TestSerializeDeserialize {
         String testText = "山茶   {n=0}\n" + "干粮  {n=4}\n" + "隐身术 {n=0}\n" + "隐隐约约    {z=1}\n" + "男儿  {n=4}\n" + "隐蔽性 {n=3}\n" + "强记  {v=1}\n" + "来信  {n=35,v=15,vn=2}\n" + "荣列  {v=0}\n" + "登程  {v=0}\n" + "隔三差五    {l=1}\n" + "误字  {n=0}\n" + "小指  {n=0}\n" + "山草  {n=0}\n" + "牧草  {n=3}\n" + "铜版纸 {n=0}\n" + "突起  {v=1,vn=0}\n" + "醋意  {n=0}\n" + "让步  {vn=4,v=2}\n" + "狼藉  {a=0}\n" + "隔墙有耳    {i=0}\n" + "话剧票 {n=0}\n" + "隔声板 {n=0}\n" + "诊脉  {v=0}\n" + "探问  {v=0}";
         String [] testWordAndInfos = testText.split( "\n" );
         @SuppressWarnings("unchecked")
-        StringPair<String []> [] pairs = Arrays.stream( testWordAndInfos ).map( (aWordAndInfo) -> {
+        PairString<String []> [] pairs = Arrays.stream( testWordAndInfos ).map( (aWordAndInfo) -> {
             String [] parts = Arrays.stream( aWordAndInfo.split( "\\s" ) ).filter( (a) -> a.length() > 0 ).toArray( String []::new );
 
             String key = parts[ 0 ];
             String info = parts[ 1 ].substring( 1, parts[ 1 ].length() - 1 );//skip {}
-            return new StringPair<String []>( key, info.split( "," ) );
-        } ).toArray( StringPair []::new );
+            return new PairString<String []>( key, info.split( "," ) );
+        } ).toArray( PairString []::new );
 
         long t1 = System.currentTimeMillis();
         DoubleArrayTrie<String []> dat = DoubleArrayTrieMaker.makeDoubleArrayTrie( pairs );

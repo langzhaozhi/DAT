@@ -24,6 +24,11 @@
 		<version>${junit.version}</version>
 		<scope>test</scope>
     	</dependency>
+    <dependency>
+    	<groupId>org.langzhaozhi.common</groupId>
+    	<artifactId>Common</artifactId>
+    	<version>1.0.0</version>
+    </dependency>
     </dependencies>
     <build>
     	<plugins>
